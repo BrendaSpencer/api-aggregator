@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Aggregator Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0d1117;
+            color: #e6edf3;
+            min-height: 100vh;
+        }
+        .card {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+        }
+        .card-header {
+            background-color: #1c2128;
+            border-bottom: 1px solid #30363d;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #8b949e;
+        }
+        .badge-date {
+            background-color: #21262d;
+            color: #8b949e;
+            border: 1px solid #30363d;
+            font-size: 0.8rem;
+            font-weight: 400;
+            padding: 0.4em 0.9em;
+            border-radius: 20px;
+        }
+        .temp-display {
+            font-size: 3.5rem;
+            font-weight: 200;
+            line-height: 1;
+        }
+        .weather-description {
+            color: #8b949e;
+        }
+        .nasa-img {
+            width: 100%;
+            border-radius: 8px;
+            max-height: 320px;
+            object-fit: cover;
+        }
+        .nasa-explanation {
+            font-size: 0.88rem;
+            color: #8b949e;
+            line-height: 1.6;
+            max-height: 110px;
+            overflow-y: auto;
+        }
+        .joke-text {
+            font-size: 1.05rem;
+            font-style: italic;
+            color: #c9d1d9;
+            line-height: 1.7;
+        }
+        .skeleton {
+            background: linear-gradient(90deg, #21262d 25%, #30363d 50%, #21262d 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: 6px;
+        }
+        @keyframes shimmer {
+            0%   { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .error-badge {
+            font-size: 0.78rem;
+            background-color: #3d1a1a;
+            color: #f85149;
+            border: 1px solid #6e2020;
+            border-radius: 6px;
+            padding: 0.3em 0.7em;
+        }
+        .refresh-btn {
+            background-color: #21262d;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            font-size: 0.85rem;
+            transition: background-color 0.15s;
+        }
+        .refresh-btn:hover {
+            background-color: #30363d;
+            color: #e6edf3;
+        }
+        .refresh-btn.spinning i {
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+
+        <!-- Header -->
+        <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+            <div>
+                <h1 class="h4 mb-0 fw-semibold">API Aggregator</h1>
+                <p class="text-secondary mb-0" style="font-size:0.85rem">Weather · Space · Jokes — all in one call</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span id="date-badge" class="badge-date">—</span>
+                <button class="btn refresh-btn px-3" id="refresh-btn" onclick="loadData()">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Cards row -->
+        <div class="row g-4">
+
+            <!-- Weather -->
+            <div class="col-12 col-md-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex align-items-center gap-2">
+                        <i class="bi bi-cloud-sun"></i> Weather
+                    </div>
+                    <div class="card-body d-flex flex-column justify-content-center" id="weather-body">
+                        <div class="skeleton mb-3" style="height:60px; width:120px;"></div>
+                        <div class="skeleton" style="height:18px; width:80px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Space -->
+            <div class="col-12 col-md-5">
+                <div class="card h-100">
+                    <div class="card-header d-flex align-items-center gap-2">
+                        <i class="bi bi-stars"></i> Astronomy Picture of the Day
+                    </div>
+                    <div class="card-body" id="space-body">
+                        <div class="skeleton mb-3" style="height:200px;"></div>
+                        <div class="skeleton mb-2" style="height:18px; width:70%;"></div>
+                        <div class="skeleton" style="height:14px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Joke -->
+            <div class="col-12 col-md-3">
+                <div class="card h-100">
+                    <div class="card-header d-flex align-items-center gap-2">
+                        <i class="bi bi-emoji-laughing"></i> Dev Joke
+                    </div>
+                    <div class="card-body d-flex flex-column justify-content-center" id="joke-body">
+                        <div class="skeleton mb-2" style="height:16px;"></div>
+                        <div class="skeleton mb-2" style="height:16px; width:85%;"></div>
+                        <div class="skeleton" style="height:16px; width:60%;"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Raw JSON toggle -->
+        <div class="mt-4">
+            <button class="btn refresh-btn px-3 btn-sm" onclick="toggleRaw()">
+                <i class="bi bi-code-slash me-1"></i> Raw JSON
+            </button>
+            <pre id="raw-json" class="mt-3 p-3 rounded" style="display:none; background:#0d1117; border:1px solid #30363d; font-size:0.78rem; color:#8b949e; max-height:400px; overflow:auto;"></pre>
+        </div>
+
+    </div>
+
+    <script>
+        let rawData = null;
+
+        async function loadData() {
+            const btn = document.getElementById('refresh-btn');
+            btn.classList.add('spinning');
+            btn.disabled = true;
+
+            showSkeletons();
+
+            try {
+                const res  = await fetch('/api/aggregate');
+                const data = await res.json();
+                rawData = data;
+                render(data);
+                document.getElementById('raw-json').textContent = JSON.stringify(data, null, 2);
+            } catch (e) {
+                showGlobalError(e.message);
+            } finally {
+                btn.classList.remove('spinning');
+                btn.disabled = false;
+            }
+        }
+
+        function render(data) {
+            document.getElementById('date-badge').textContent = data.date ?? '—';
+            renderWeather(data.weather);
+            renderSpace(data.space);
+            renderJoke(data.joke);
+        }
+
+        function renderWeather(w) {
+            const el = document.getElementById('weather-body');
+            if (!w || w.error) {
+                el.innerHTML = errorHtml(w?.error ?? 'Unavailable');
+                return;
+            }
+            el.innerHTML = `
+                <div class="temp-display mb-1">${w.temp ?? '—'}<span style="font-size:1.5rem">°C</span></div>
+                <div class="weather-description mb-2">${w.description ?? '—'}</div>
+                <div class="text-secondary" style="font-size:0.82rem"><i class="bi bi-geo-alt-fill me-1"></i>${w.city ?? '—'}</div>
+            `;
+        }
+
+        function renderSpace(s) {
+            const el = document.getElementById('space-body');
+            if (!s || s.error) {
+                el.innerHTML = errorHtml(s?.error ?? 'Unavailable');
+                return;
+            }
+            const img = s.image_url
+                ? `<img src="${s.image_url}" alt="${s.title}" class="nasa-img mb-3">`
+                : '';
+            el.innerHTML = `
+                ${img}
+                <h6 class="fw-semibold mb-2">${s.title ?? '—'}</h6>
+                <p class="nasa-explanation mb-0">${s.explanation ?? ''}</p>
+            `;
+        }
+
+        function renderJoke(joke) {
+            const el = document.getElementById('joke-body');
+            if (!joke || (typeof joke === 'object' && joke.error)) {
+                el.innerHTML = errorHtml(joke?.error ?? 'Unavailable');
+                return;
+            }
+            el.innerHTML = `<p class="joke-text mb-0">"${joke}"</p>`;
+        }
+
+        function showSkeletons() {
+            const skeletonHtml = `
+                <div class="skeleton mb-2" style="height:16px;"></div>
+                <div class="skeleton mb-2" style="height:16px; width:75%;"></div>
+            `;
+            ['weather-body', 'space-body', 'joke-body'].forEach(id => {
+                document.getElementById(id).innerHTML = skeletonHtml;
+            });
+        }
+
+        function errorHtml(msg) {
+            return `<span class="error-badge"><i class="bi bi-exclamation-circle me-1"></i>${msg}</span>`;
+        }
+
+        function showGlobalError(msg) {
+            ['weather-body', 'space-body', 'joke-body'].forEach(id => {
+                document.getElementById(id).innerHTML = errorHtml(msg);
+            });
+        }
+
+        function toggleRaw() {
+            const el = document.getElementById('raw-json');
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
